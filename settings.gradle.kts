@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "Currency Converter"
-include(":app", "network", "di", "data")
+include(":app", "network", "di", "data", "domain")

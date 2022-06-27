@@ -15,7 +15,7 @@ class DataSourceModule {
 
     @Provides
     @Singleton
-    fun provideFlickrDataSource(
+    fun provideRatesDataSource(
         apiService: ApiService
     ): RatesDataSource {
         return RatesDataSourceImpl(apiService = apiService)
