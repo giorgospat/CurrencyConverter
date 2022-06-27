@@ -74,6 +74,7 @@ dependencies {
     //modules
     implementation(project(":network"))
     implementation(project(":di"))
+    implementation(project(":data"))
 
     //core & ui
     implementation(Libraries.coreKtx)

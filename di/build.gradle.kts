@@ -51,6 +51,7 @@ android {
 
 dependencies {
     implementation(project(":network"))
+    implementation(project(":data"))
 
     //di
     implementation(Libraries.hilt)
