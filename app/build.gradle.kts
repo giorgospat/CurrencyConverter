@@ -71,6 +71,10 @@ android {
 
 dependencies {
 
+    //modules
+    implementation(project(":network"))
+    implementation(project(":di"))
+
     //core & ui
     implementation(Libraries.coreKtx)
     implementation(Libraries.appCompat)
