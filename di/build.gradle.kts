@@ -54,6 +54,9 @@ dependencies {
     implementation(project(":data"))
     implementation(project(":domain"))
 
+    //coroutines
+    implementation(Libraries.coroutines)
+
     //di
     implementation(Libraries.hilt)
     kapt(Libraries.hiltCompiler)

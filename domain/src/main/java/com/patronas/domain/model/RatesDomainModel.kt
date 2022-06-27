@@ -1,11 +1,8 @@
 package com.patronas.domain.model
 
+import com.patronas.domain.model.reusable.RateModel
+
 data class RatesDomainModel(
     val baseRate: String = "",
     val rates: List<RateModel> = listOf()
-)
-
-data class RateModel(
-    val name: String = "",
-    val rate: Double = 1.0
 )

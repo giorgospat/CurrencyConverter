@@ -1,6 +1,7 @@
-package com.patronas.currencyconverter
+package com.patronas.currencyconverter.base
 
 import android.app.Application
+import com.patronas.currencyconverter.BuildConfig
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 

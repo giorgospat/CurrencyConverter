@@ -86,6 +86,7 @@ dependencies {
     implementation(Libraries.composeUiPreview)
     implementation(Libraries.runtimeLifecycleKtx)
     implementation(Libraries.composeActivity)
+    implementation(Libraries.viewModelCompose)
 
     //image loading
     implementation(Libraries.coil)

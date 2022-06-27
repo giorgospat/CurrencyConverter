@@ -1,4 +1,4 @@
-package com.patronas.currencyconverter.ui.theme
+package com.patronas.currencyconverter.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

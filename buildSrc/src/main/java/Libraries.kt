@@ -53,4 +53,6 @@ object Libraries {
     /*https://coil-kt.github.io/coil/compose */
     const val coil = "io.coil-kt:coil-compose:${Versions.coil}"
 
+    const val viewModelCompose = "androidx.lifecycle:lifecycle-viewmodel-compose:${Versions.viewmodelCompose}"
+
 }

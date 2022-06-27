@@ -1,7 +1,7 @@
 package com.patronas.domain.mapper
 
-import com.patronas.domain.model.RateModel
 import com.patronas.domain.model.RatesDomainModel
+import com.patronas.domain.model.reusable.RateModel
 import com.patronas.network.model.CurrencyRatesApiResponse
 
 class RatesDomainMapper {
