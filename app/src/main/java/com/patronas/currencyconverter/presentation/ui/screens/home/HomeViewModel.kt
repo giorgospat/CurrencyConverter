@@ -3,7 +3,7 @@ package com.patronas.currencyconverter.presentation.ui.screens.home
 import androidx.lifecycle.viewModelScope
 import com.patronas.currencyconverter.base.BaseViewModel
 import com.patronas.data.base.DomainApiResult
-import com.patronas.domain.model.reusable.RateModel
+import com.patronas.domain.model.RatesDomainModel
 import com.patronas.domain.usecase.GetRatesUseCase
 import com.patronas.utils.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,28 +18,22 @@ class HomeViewModel @Inject constructor(
     private val ratesUseCase: GetRatesUseCase
 ) : BaseViewModel() {
 
-    private val _baseRate = MutableStateFlow("")
-    private val baseRate = _baseRate.asStateFlow()
-
-    private val _rates = MutableStateFlow(listOf<RateModel>())
-    private val rates = _rates.asStateFlow()
-
+    private val _ratesModel = MutableStateFlow(RatesDomainModel())
+    private val ratesModel = _ratesModel.asStateFlow()
 
     init {
         fetchRates()
     }
 
     val uiState = HomeUiState(
-        baseRate = baseRate,
-        rates = rates
+        ratesModel = ratesModel
     )
 
     private fun fetchRates() {
         viewModelScope.launch(dispatcher.background()) {
             when (val request = ratesUseCase.getRates()) {
                 is DomainApiResult.Success -> {
-                    _baseRate.value = request.data.baseRate
-                    _rates.value = request.data.rates
+                    _ratesModel.value = request.data
                 }
                 is DomainApiResult.Error -> {
                     //TODO handle error

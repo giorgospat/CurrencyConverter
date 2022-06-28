@@ -10,6 +10,7 @@ class RatesDomainMapper {
 
         return RatesDomainModel(
             baseRate = apiResponse.base ?: "",
+            currencies = apiResponse.rates?.map { it.key } ?: listOf(),
             rates = apiResponse.rates?.map { RateModel(name = it.key, rate = it.value) } ?: listOf()
         )
 
