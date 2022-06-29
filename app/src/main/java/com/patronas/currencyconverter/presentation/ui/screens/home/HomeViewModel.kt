@@ -3,18 +3,23 @@ package com.patronas.currencyconverter.presentation.ui.screens.home
 import androidx.lifecycle.viewModelScope
 import com.patronas.currencyconverter.base.BaseViewModel
 import com.patronas.currencyconverter.presentation.extensions.round
+import com.patronas.currencyconverter.presentation.model.BalanceUiModel
+import com.patronas.currencyconverter.presentation.model.toUiModel
 import com.patronas.data.base.DomainApiResult
 import com.patronas.domain.EUR
 import com.patronas.domain.USD
 import com.patronas.domain.model.RatesDomainModel
+import com.patronas.domain.model.reusable.RateModel
 import com.patronas.domain.usecase.GetRatesUseCase
 import com.patronas.storage.datastore.transactions.TransactionsUseCase
 import com.patronas.utils.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -45,14 +50,19 @@ class HomeViewModel @Inject constructor(
     private val _buyAmount = MutableStateFlow("")
     private val buyAmount = _buyAmount.asStateFlow()
 
+    private val _balances = MutableStateFlow(listOf<BalanceUiModel>())
+    private val balances = _balances.asStateFlow()
+
     private val initialBalanceEUR = 1000.0
 
     init {
         viewModelScope.launch {
             withContext(dispatcher.background()) {
-              //  fetchRates()
+                fetchFakeRates()
+                // fetchRates()
                 setInitialTransactionCurrencies()
                 setInitialBalances()
+                observeBalances()
             }
         }
     }
@@ -69,13 +79,21 @@ class HomeViewModel @Inject constructor(
         updateBuyCurrency = {
             updateBuyCurrencies(currency = it)
         },
+        makeTransaction = {
+            updateBalance(
+                fromCurrency = selectedSellCurrency.value,
+                sellAmount = sellAmount.value.toDouble(),
+                toCurrency = selectedBuyCurrency.value,
+                buyAmount = buyAmount.value.toDouble()
+            )
+        },
         sellAmount = sellAmount,
         buyAmount = buyAmount,
         updateSellAmount = {
             _sellAmount.value = it.toString()
             _buyAmount.value = (it * 1.1).round()
-            updateBalance(currency = selectedBuyCurrency.value, amount = it * 1.1)
-        }
+        },
+        balances = balances
     )
 
     private suspend fun fetchRates() {
@@ -119,10 +137,47 @@ class HomeViewModel @Inject constructor(
         )
     }
 
-    private fun updateBalance(currency: String, amount: Double) {
+    private fun updateBalance(
+        fromCurrency: String,
+        sellAmount: Double,
+        toCurrency: String,
+        buyAmount: Double
+    ) {
         viewModelScope.launch(dispatcher.background()) {
-            transactionsUseCase.updateBalance(currency = currency, amount = amount)
+            withContext(dispatcher.background()) {
+                transactionsUseCase.exchangeCurrency(
+                    fromCurrency = fromCurrency,
+                    sellAmount = sellAmount,
+                    toCurrency = toCurrency,
+                    buyAmount = buyAmount
+                )
+                val newBalance = transactionsUseCase.getBalance().first()
+                Timber.tag("transaction")
+                    .i("$fromCurrency, newBalance: ${newBalance.currencies[fromCurrency]}")
+                Timber.tag("transaction")
+                    .i("$toCurrency, newBalance: ${newBalance.currencies[toCurrency]}")
+            }
         }
+    }
+
+    private suspend fun observeBalances() {
+        transactionsUseCase.getBalance().collect {
+            _balances.value = it.toUiModel()
+        }
+    }
+
+    private fun fetchFakeRates() {
+        _ratesModel.value = RatesDomainModel(
+            baseRate = "EUR",
+            currencies = listOf("EUR", "AFN", "AED", "USD", "TWD"),
+            rates = listOf(
+                RateModel(name = "EUR", rate = 1.0),
+                RateModel(name = "AED", rate = 3.886633),
+                RateModel(name = "AFN", rate = 94.698461),
+                RateModel(name = "USD", rate = 1.058134),
+                RateModel(name = "TWD", rate = 31.392738)
+            )
+        )
     }
 
 }

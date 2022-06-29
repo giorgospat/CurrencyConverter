@@ -9,6 +9,12 @@ interface TransactionsUseCase {
         primaryCurrency: String,
         currencies: List<String>
     )
-    suspend fun getBalance(): Flow<UserBalanceModel>
-    suspend fun updateBalance(currency: String, amount: Double)
+
+    fun getBalance(): Flow<UserBalanceModel>
+    suspend fun exchangeCurrency(
+        fromCurrency: String,
+        sellAmount: Double,
+        toCurrency: String,
+        buyAmount: Double
+    )
 }

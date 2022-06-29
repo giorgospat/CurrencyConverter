@@ -1,5 +1,5 @@
 package com.patronas.currencyconverter.presentation.extensions
 
-fun Double.round(): String {
-    return String.format("%.2f", this)
+fun Double.round(decimals: Int = 2): String {
+    return String.format("%.${decimals}f", this)
 }

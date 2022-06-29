@@ -61,7 +61,7 @@ class TransactionsUseCaseImpl(val context: Context, val moshi: Moshi) : Transact
         }
     }
 
-    override suspend fun getBalance(): Flow<UserBalanceModel> {
+    override fun getBalance(): Flow<UserBalanceModel> {
         return context.dataStore.data
             .map { prefs ->
                 prefs[USER_BALANCES]?.let {
@@ -70,13 +70,24 @@ class TransactionsUseCaseImpl(val context: Context, val moshi: Moshi) : Transact
             }
     }
 
-    override suspend fun updateBalance(currency: String, amount: Double) {
+    override suspend fun exchangeCurrency(
+        fromCurrency: String,
+        sellAmount: Double,
+        toCurrency: String,
+        buyAmount: Double
+    ) {
         context.dataStore.edit { prefs ->
             prefs[USER_BALANCES]?.let {
                 //fetch map
                 val savedBalances: MutableMap<String, Double> =
                     adapter.fromJson(it) as MutableMap<String, Double>
-                savedBalances[currency] = amount
+
+                savedBalances[fromCurrency]?.let { currentAmount ->
+                    savedBalances[fromCurrency] = currentAmount - sellAmount
+                }
+                savedBalances[toCurrency]?.let { currentAmount ->
+                    savedBalances[toCurrency] = currentAmount + buyAmount
+                }
 
                 //save updated map
                 prefs[USER_BALANCES] = adapter.toJson(savedBalances)

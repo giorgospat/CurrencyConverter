@@ -29,41 +29,41 @@ fun CurrencyTransaction(uiState: HomeUiState) {
     val sellAmount = uiState.sellAmount.collectAsState().value
     val buyAmount = uiState.buyAmount.collectAsState().value
 
-    // if (sellCurrencies.isNotEmpty() && buyCurrencies.isNotEmpty()) {
+    if (sellCurrencies.isNotEmpty() && buyCurrencies.isNotEmpty()) {
 
-    Column(modifier = Modifier.padding(10.dp)) {
-        Text(text = stringResource(R.string.currency_exchange_label))
-        //sell
-        CurrencyExchangeRow(
-            selectedCurrency = sellCurrency,
-            currencies = sellCurrencies,
-            amount = sellAmount,
-            updateAmount = {
-                uiState.updateSellAmount(it)
-            },
-            label = stringResource(R.string.sell_label),
-            icon = R.drawable.ic_up_arrow,
-            updateSelectedCurrency = {
-                uiState.updateSellCurrency(it)
-            },
-            type = TransactionType.SELL
-        )
-        //buy
-        CurrencyExchangeRow(
-            selectedCurrency = buyCurrency,
-            currencies = buyCurrencies,
-            amount = buyAmount,
-            updateAmount = {
-            },
-            label = stringResource(R.string.receive_label),
-            icon = R.drawable.ic_down_arrow,
-            updateSelectedCurrency = {
-                uiState.updateBuyCurrency(it)
-            },
-            type = TransactionType.BUY
-        )
+        Column {
+            Text(text = stringResource(R.string.currency_exchange_label))
+            //sell
+            CurrencyExchangeRow(
+                selectedCurrency = sellCurrency,
+                currencies = sellCurrencies,
+                amount = sellAmount,
+                updateAmount = {
+                    uiState.updateSellAmount(it)
+                },
+                label = stringResource(R.string.sell_label),
+                icon = R.drawable.ic_up_arrow,
+                updateSelectedCurrency = {
+                    uiState.updateSellCurrency(it)
+                },
+                type = TransactionType.SELL
+            )
+            //buy
+            CurrencyExchangeRow(
+                selectedCurrency = buyCurrency,
+                currencies = buyCurrencies,
+                amount = buyAmount,
+                updateAmount = {
+                },
+                label = stringResource(R.string.receive_label),
+                icon = R.drawable.ic_down_arrow,
+                updateSelectedCurrency = {
+                    uiState.updateBuyCurrency(it)
+                },
+                type = TransactionType.BUY
+            )
+        }
     }
-    // }
 }
 
 @Composable
