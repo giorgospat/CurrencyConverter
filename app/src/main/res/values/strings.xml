@@ -5,4 +5,9 @@
     <string name="sell_label">Sell</string>
     <string name="receive_label">Receive</string>
     <string name="submit_btn_label">Submit</string>
+    <string name="popup_ok_button">OK</string>
+    <string name="popup_currency_converted_title">Currency converted</string>
+    <string name="currency_conversion_error_title">Transaction error</string>
+    <string name="empty_amount_error">Sell amount is empty, please check your input.</string>
+    <string name="insufficient_balance_error">Your balance is not enough for this transaction.</string>
 </resources>

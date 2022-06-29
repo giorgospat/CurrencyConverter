@@ -6,7 +6,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.patronas.storage.extensions.isValidDouble
 import com.patronas.storage.model.UserBalanceModel
+import com.patronas.storage.model.transaction.TransactionError
+import com.patronas.storage.model.transaction.TransactionResponse
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -15,9 +18,8 @@ import kotlinx.coroutines.flow.map
 import java.lang.reflect.Type
 
 
-class TransactionsUseCaseImpl(val context: Context, val moshi: Moshi) : TransactionsUseCase {
+class TransactionsUseCaseImpl(private val context: Context, moshi: Moshi) : TransactionsUseCase {
 
-    private val userBalance = UserBalanceModel()
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "transactionPrefs")
     private val USER_BALANCES = stringPreferencesKey("user_balances")
 
@@ -35,7 +37,7 @@ class TransactionsUseCaseImpl(val context: Context, val moshi: Moshi) : Transact
     ) {
         context.dataStore.edit { prefs ->
             /**
-            Already initilized with initial amount
+            Already initialized with initial amount
              */
             prefs[USER_BALANCES]?.let {
                 val savedBalances: MutableMap<String, Double> =
@@ -72,27 +74,33 @@ class TransactionsUseCaseImpl(val context: Context, val moshi: Moshi) : Transact
 
     override suspend fun exchangeCurrency(
         fromCurrency: String,
-        sellAmount: Double,
+        sellAmount: String,
         toCurrency: String,
-        buyAmount: Double
-    ) {
-        context.dataStore.edit { prefs ->
-            prefs[USER_BALANCES]?.let {
-                //fetch map
-                val savedBalances: MutableMap<String, Double> =
-                    adapter.fromJson(it) as MutableMap<String, Double>
+        buyAmount: String
+    ): TransactionResponse {
+        if (sellAmount.isValidDouble() && buyAmount.isValidDouble()) {
+            context.dataStore.edit { prefs ->
+                prefs[USER_BALANCES]?.let {
+                    //fetch map
+                    val savedBalances: MutableMap<String, Double> =
+                        adapter.fromJson(it) as MutableMap<String, Double>
 
-                savedBalances[fromCurrency]?.let { currentAmount ->
-                    savedBalances[fromCurrency] = currentAmount - sellAmount
-                }
-                savedBalances[toCurrency]?.let { currentAmount ->
-                    savedBalances[toCurrency] = currentAmount + buyAmount
-                }
+                    //make transactions
+                    savedBalances[fromCurrency]?.let { currentAmount ->
+                        savedBalances[fromCurrency] = currentAmount - sellAmount.toDouble()
+                    }
+                    savedBalances[toCurrency]?.let { currentAmount ->
+                        savedBalances[toCurrency] = currentAmount + buyAmount.toDouble()
+                    }
 
-                //save updated map
-                prefs[USER_BALANCES] = adapter.toJson(savedBalances)
+                    //save updated map
+                    prefs[USER_BALANCES] = adapter.toJson(savedBalances)
+                }
             }
+        } else {
+            return TransactionResponse.Error(error = TransactionError.INVALID_AMOUNT)
         }
+        return TransactionResponse.Success
     }
 
 }

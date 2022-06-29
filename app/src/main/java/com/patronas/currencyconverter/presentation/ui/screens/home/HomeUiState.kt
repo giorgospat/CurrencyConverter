@@ -1,7 +1,7 @@
 package com.patronas.currencyconverter.presentation.ui.screens.home
 
-import com.patronas.domain.model.RatesDomainModel
 import com.patronas.currencyconverter.presentation.model.BalanceUiModel
+import com.patronas.domain.model.RatesDomainModel
 import kotlinx.coroutines.flow.StateFlow
 
 data class HomeUiState(
@@ -16,5 +16,13 @@ data class HomeUiState(
     val sellAmount: StateFlow<String>,
     val buyAmount: StateFlow<String>,
     val updateSellAmount: (String) -> Unit,
-    val balances: StateFlow<List<BalanceUiModel>>
+    val balances: StateFlow<List<BalanceUiModel>>,
+    val dismissDialog: () -> Unit
 )
+
+sealed class HomeUiEvent {
+    data class ExchangeCompleted(val message: String) : HomeUiEvent()
+    object InputAmountEmptyError : HomeUiEvent()
+    object InsufficientBalanceError : HomeUiEvent()
+    object Default : HomeUiEvent()
+}

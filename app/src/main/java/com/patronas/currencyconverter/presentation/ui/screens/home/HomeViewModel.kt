@@ -13,6 +13,8 @@ import com.patronas.domain.model.RatesDomainModel
 import com.patronas.domain.model.reusable.RateModel
 import com.patronas.domain.usecase.GetRatesUseCase
 import com.patronas.storage.datastore.transactions.TransactionsUseCase
+import com.patronas.storage.model.transaction.TransactionError
+import com.patronas.storage.model.transaction.TransactionResponse
 import com.patronas.utils.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +56,9 @@ class HomeViewModel @Inject constructor(
     private val _balances = MutableStateFlow(listOf<BalanceUiModel>())
     private val balances = _balances.asStateFlow()
 
+    private val _uiEvent = MutableStateFlow<HomeUiEvent>(HomeUiEvent.Default)
+    val uiEvent = _uiEvent.asStateFlow()
+
     private val initialBalanceEUR = 1000.0
 
     init {
@@ -75,17 +80,17 @@ class HomeViewModel @Inject constructor(
         selectedSellCurrency = selectedSellCurrency,
         selectedBuyCurrency = selectedBuyCurrency,
         updateSellCurrency = {
-            updateSellCurrencies(currency = it)
+            updateSellCurrenciesList(currency = it)
         },
         updateBuyCurrency = {
-            updateBuyCurrencies(currency = it)
+            updateBuyCurrenciesList(currency = it)
         },
         makeTransaction = {
             makeTransaction(
                 fromCurrency = selectedSellCurrency.value,
-                sellAmount = sellAmount.value.toDouble(),
+                sellAmount = sellAmount.value,
                 toCurrency = selectedBuyCurrency.value,
-                buyAmount = buyAmount.value.toDouble()
+                buyAmount = buyAmount.value
             )
         },
         sellAmount = sellAmount,
@@ -94,7 +99,10 @@ class HomeViewModel @Inject constructor(
             _sellAmount.value = it
             _buyAmount.value = calculateBuyAmount(amount = it)
         },
-        balances = balances
+        balances = balances,
+        dismissDialog = {
+            dismissDialog()
+        }
     )
 
     private suspend fun fetchRates() {
@@ -109,28 +117,32 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun setInitialTransactionCurrencies() {
-        _sellCurrencies.value = ratesModel.value.currencies.filter { it != USD }
-        _buyCurrencies.value = ratesModel.value.currencies.filter { it != EUR }
+        _sellCurrencies.value = ratesModel.value.currencies
+        _buyCurrencies.value = ratesModel.value.currencies
 
         _selectedSellCurrency.value = ratesModel.value.currencies.find { it == EUR } ?: ""
         _selectedBuyCurrency.value = ratesModel.value.currencies.find { it == USD } ?: ""
     }
 
-    private fun updateSellCurrencies(currency: String) {
+    private fun updateSellCurrenciesList(currency: String) {
+
+        //reverse currencies if selected sell currency is same as buy currency
+        if (selectedBuyCurrency.value == currency) {
+            _selectedBuyCurrency.value = selectedSellCurrency.value
+        }
         _selectedSellCurrency.value = currency
-        //remove selected currency from buy list
-        _buyCurrencies.value = ratesModel.value.currencies.toMutableList().filter { it != currency }
 
         //update value for selected rate
         _buyAmount.value = calculateBuyAmount(amount = sellAmount.value)
     }
 
-    private fun updateBuyCurrencies(currency: String) {
-        _selectedBuyCurrency.value = currency
+    private fun updateBuyCurrenciesList(currency: String) {
 
-        //remove selected currency from sell list
-        _sellCurrencies.value =
-            ratesModel.value.currencies.toMutableList().filter { it != currency }
+        //reverse currencies if selected buy currency is same as sell currency
+        if (selectedSellCurrency.value == currency) {
+            _selectedSellCurrency.value = selectedBuyCurrency.value
+        }
+        _selectedBuyCurrency.value = currency
 
         //update value for selected rate
         _buyAmount.value = calculateBuyAmount(amount = sellAmount.value)
@@ -146,22 +158,37 @@ class HomeViewModel @Inject constructor(
 
     private fun makeTransaction(
         fromCurrency: String,
-        sellAmount: Double,
+        sellAmount: String,
         toCurrency: String,
-        buyAmount: Double
+        buyAmount: String
     ) {
         viewModelScope.launch(dispatcher.background()) {
-            transactionsUseCase.exchangeCurrency(
+            when (val transactionResult = transactionsUseCase.exchangeCurrency(
                 fromCurrency = fromCurrency,
                 sellAmount = sellAmount,
                 toCurrency = toCurrency,
                 buyAmount = buyAmount
-            )
-            val newBalance = transactionsUseCase.getBalance().first()
-            Timber.tag("transaction")
-                .i("$fromCurrency, newBalance: ${newBalance.currencies[fromCurrency]}")
-            Timber.tag("transaction")
-                .i("$toCurrency, newBalance: ${newBalance.currencies[toCurrency]}")
+            )) {
+                is TransactionResponse.Success -> {
+                    _uiEvent.emit(HomeUiEvent.ExchangeCompleted(message = "All Good!"))
+                    val newBalance = transactionsUseCase.getBalance().first()
+                    Timber.tag("transaction")
+                        .i("$fromCurrency, newBalance: ${newBalance.currencies[fromCurrency]}")
+                    Timber.tag("transaction")
+                        .i("$toCurrency, newBalance: ${newBalance.currencies[toCurrency]}")
+                }
+
+                is TransactionResponse.Error -> {
+                    when (transactionResult.error) {
+                        TransactionError.INSUFFICIENT_BALANCE -> {
+                            _uiEvent.tryEmit(HomeUiEvent.InsufficientBalanceError)
+                        }
+                        TransactionError.INVALID_AMOUNT -> {
+                            _uiEvent.tryEmit(HomeUiEvent.InputAmountEmptyError)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -187,6 +214,10 @@ class HomeViewModel @Inject constructor(
             }
         }
         return ""
+    }
+
+    private fun dismissDialog() {
+        _uiEvent.tryEmit(HomeUiEvent.Default)
     }
 
     private fun fetchFakeRates() {

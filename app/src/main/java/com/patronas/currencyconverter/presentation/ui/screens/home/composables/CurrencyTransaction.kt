@@ -94,14 +94,14 @@ fun CurrencyExchangeRow(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             val prefix = "+".takeIf { type == TransactionType.BUY && amount.isNotEmpty() } ?: ""
-            BasicTextField(
+            OutlinedTextField(
                 value = prefix + amount,
                 onValueChange = { amount ->
                     if (amount.isValidAmount()) {
                         updateAmount(amount)
                     }
                 },
-                modifier = Modifier.width(50.dp),
+                modifier = Modifier.width(100.dp),
                 readOnly = type == TransactionType.BUY,
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
             )
