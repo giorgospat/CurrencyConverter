@@ -8,6 +8,7 @@ import com.patronas.currencyconverter.presentation.model.toUiModel
 import com.patronas.data.base.DomainApiResult
 import com.patronas.domain.EUR
 import com.patronas.domain.USD
+import com.patronas.domain.extensions.getRateForCurrency
 import com.patronas.domain.model.RatesDomainModel
 import com.patronas.domain.model.reusable.RateModel
 import com.patronas.domain.usecase.GetRatesUseCase
@@ -80,7 +81,7 @@ class HomeViewModel @Inject constructor(
             updateBuyCurrencies(currency = it)
         },
         makeTransaction = {
-            updateBalance(
+            makeTransaction(
                 fromCurrency = selectedSellCurrency.value,
                 sellAmount = sellAmount.value.toDouble(),
                 toCurrency = selectedBuyCurrency.value,
@@ -90,8 +91,8 @@ class HomeViewModel @Inject constructor(
         sellAmount = sellAmount,
         buyAmount = buyAmount,
         updateSellAmount = {
-            _sellAmount.value = it.toString()
-            _buyAmount.value = (it * 1.1).round()
+            _sellAmount.value = it
+            _buyAmount.value = calculateBuyAmount(amount = it)
         },
         balances = balances
     )
@@ -119,6 +120,9 @@ class HomeViewModel @Inject constructor(
         _selectedSellCurrency.value = currency
         //remove selected currency from buy list
         _buyCurrencies.value = ratesModel.value.currencies.toMutableList().filter { it != currency }
+
+        //update value for selected rate
+        _buyAmount.value = calculateBuyAmount(amount = sellAmount.value)
     }
 
     private fun updateBuyCurrencies(currency: String) {
@@ -127,6 +131,9 @@ class HomeViewModel @Inject constructor(
         //remove selected currency from sell list
         _sellCurrencies.value =
             ratesModel.value.currencies.toMutableList().filter { it != currency }
+
+        //update value for selected rate
+        _buyAmount.value = calculateBuyAmount(amount = sellAmount.value)
     }
 
     private suspend fun setInitialBalances() {
@@ -137,26 +144,24 @@ class HomeViewModel @Inject constructor(
         )
     }
 
-    private fun updateBalance(
+    private fun makeTransaction(
         fromCurrency: String,
         sellAmount: Double,
         toCurrency: String,
         buyAmount: Double
     ) {
         viewModelScope.launch(dispatcher.background()) {
-            withContext(dispatcher.background()) {
-                transactionsUseCase.exchangeCurrency(
-                    fromCurrency = fromCurrency,
-                    sellAmount = sellAmount,
-                    toCurrency = toCurrency,
-                    buyAmount = buyAmount
-                )
-                val newBalance = transactionsUseCase.getBalance().first()
-                Timber.tag("transaction")
-                    .i("$fromCurrency, newBalance: ${newBalance.currencies[fromCurrency]}")
-                Timber.tag("transaction")
-                    .i("$toCurrency, newBalance: ${newBalance.currencies[toCurrency]}")
-            }
+            transactionsUseCase.exchangeCurrency(
+                fromCurrency = fromCurrency,
+                sellAmount = sellAmount,
+                toCurrency = toCurrency,
+                buyAmount = buyAmount
+            )
+            val newBalance = transactionsUseCase.getBalance().first()
+            Timber.tag("transaction")
+                .i("$fromCurrency, newBalance: ${newBalance.currencies[fromCurrency]}")
+            Timber.tag("transaction")
+                .i("$toCurrency, newBalance: ${newBalance.currencies[toCurrency]}")
         }
     }
 
@@ -164,6 +169,24 @@ class HomeViewModel @Inject constructor(
         transactionsUseCase.getBalance().collect {
             _balances.value = it.toUiModel()
         }
+    }
+
+    private fun calculateBuyAmount(amount: String): String {
+        val buyValue = amount.toDoubleOrNull()
+        val sellCurrencyRate =
+            ratesModel.value.getRateForCurrency(currency = selectedSellCurrency.value)
+        val buyCurrencyRate =
+            ratesModel.value.getRateForCurrency(currency = selectedBuyCurrency.value)
+
+        //if selected buy currency is Base currency then divide, else multiple with rate
+        buyValue?.let {
+            return if (selectedBuyCurrency.value == ratesModel.value.baseRate) {
+                buyCurrencyRate.div(sellCurrencyRate).times(buyValue).round()
+            } else {
+                buyCurrencyRate.times(sellCurrencyRate).times(buyValue).round()
+            }
+        }
+        return ""
     }
 
     private fun fetchFakeRates() {

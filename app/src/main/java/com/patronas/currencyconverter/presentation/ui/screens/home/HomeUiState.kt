@@ -15,6 +15,6 @@ data class HomeUiState(
     val makeTransaction: () -> Unit,
     val sellAmount: StateFlow<String>,
     val buyAmount: StateFlow<String>,
-    val updateSellAmount: (Double) -> Unit,
+    val updateSellAmount: (String) -> Unit,
     val balances: StateFlow<List<BalanceUiModel>>
 )

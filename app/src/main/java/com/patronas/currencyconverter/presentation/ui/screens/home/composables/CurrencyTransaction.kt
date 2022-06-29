@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.patronas.currencyconverter.R
+import com.patronas.currencyconverter.presentation.extensions.isValidAmount
 import com.patronas.currencyconverter.presentation.model.TransactionType
 import com.patronas.currencyconverter.presentation.ui.screens.home.HomeUiState
 
@@ -24,8 +25,8 @@ fun CurrencyTransaction(uiState: HomeUiState) {
 
     val sellCurrencies = uiState.sellCurrencies.collectAsState().value
     val buyCurrencies = uiState.buyCurrencies.collectAsState().value
-    val sellCurrency = uiState.selectedSellCurrency.collectAsState().value
-    val buyCurrency = uiState.selectedBuyCurrency.collectAsState().value
+    val selectedSellCurrency = uiState.selectedSellCurrency.collectAsState().value
+    val selectedBuyCurrency = uiState.selectedBuyCurrency.collectAsState().value
     val sellAmount = uiState.sellAmount.collectAsState().value
     val buyAmount = uiState.buyAmount.collectAsState().value
 
@@ -35,7 +36,7 @@ fun CurrencyTransaction(uiState: HomeUiState) {
             Text(text = stringResource(R.string.currency_exchange_label))
             //sell
             CurrencyExchangeRow(
-                selectedCurrency = sellCurrency,
+                selectedCurrency = selectedSellCurrency,
                 currencies = sellCurrencies,
                 amount = sellAmount,
                 updateAmount = {
@@ -50,7 +51,7 @@ fun CurrencyTransaction(uiState: HomeUiState) {
             )
             //buy
             CurrencyExchangeRow(
-                selectedCurrency = buyCurrency,
+                selectedCurrency = selectedBuyCurrency,
                 currencies = buyCurrencies,
                 amount = buyAmount,
                 updateAmount = {
@@ -71,7 +72,7 @@ fun CurrencyExchangeRow(
     selectedCurrency: String,
     currencies: List<String>,
     amount: String,
-    updateAmount: (Double) -> Unit,
+    updateAmount: (String) -> Unit,
     label: String,
     @DrawableRes icon: Int,
     updateSelectedCurrency: (String) -> Unit,
@@ -92,12 +93,12 @@ fun CurrencyExchangeRow(
             Text(text = label, modifier = Modifier.padding(start = 10.dp))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val prefix = "+".takeIf { type == TransactionType.BUY } ?: ""
+            val prefix = "+".takeIf { type == TransactionType.BUY && amount.isNotEmpty() } ?: ""
             BasicTextField(
                 value = prefix + amount,
                 onValueChange = { amount ->
-                    amount.toDoubleOrNull()?.let {
-                        updateAmount(it)
+                    if (amount.isValidAmount()) {
+                        updateAmount(amount)
                     }
                 },
                 modifier = Modifier.width(50.dp),
