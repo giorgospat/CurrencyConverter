@@ -21,4 +21,5 @@ object Versions {
     const val archCore = "2.1.0"
     const val coil = "2.1.0"
     const val viewmodelCompose = "2.4.1"
+    const val datastore = "1.0.0"
 }

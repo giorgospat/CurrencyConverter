@@ -53,6 +53,10 @@ object Libraries {
     /*https://coil-kt.github.io/coil/compose */
     const val coil = "io.coil-kt:coil-compose:${Versions.coil}"
 
-    const val viewModelCompose = "androidx.lifecycle:lifecycle-viewmodel-compose:${Versions.viewmodelCompose}"
+    const val viewModelCompose =
+        "androidx.lifecycle:lifecycle-viewmodel-compose:${Versions.viewmodelCompose}"
+
+    /* https://developer.android.com/topic/libraries/architecture/datastore */
+    const val datastore = "androidx.datastore:datastore-preferences:${Versions.datastore}"
 
 }

@@ -47,24 +47,16 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
-    implementation(project(":network"))
-    implementation(project(":data"))
-    implementation(project(":domain"))
-    implementation(project(":storage"))
 
-    //coroutines
     implementation(Libraries.coroutines)
-
-    //di
-    implementation(Libraries.hilt)
-    kapt(Libraries.hiltCompiler)
-
-    //network
-    implementation(Libraries.retrofit)
-    implementation(Libraries.okhttpLogging)
+    implementation(Libraries.datastore)
     implementation(Libraries.moshi)
+    implementation(Libraries.moshiConverter)
 
 }

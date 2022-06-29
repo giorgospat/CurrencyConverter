@@ -4,8 +4,6 @@ import com.patronas.data.repository.rates.RatesRepository
 import com.patronas.domain.mapper.RatesDomainMapper
 import com.patronas.domain.usecase.GetRatesUseCase
 import com.patronas.domain.usecase.GetRatesUseCaseImpl
-import com.patronas.domain.usecase.user.TransactionsUseCase
-import com.patronas.domain.usecase.user.TransactionsUseCaseImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,12 +22,6 @@ class UseCaseModule {
         mapper: RatesDomainMapper
     ): GetRatesUseCase {
         return GetRatesUseCaseImpl(repo, mapper)
-    }
-
-    @Provides
-    @ViewModelScoped
-    fun provideTransactionsUseCase(): TransactionsUseCase {
-        return TransactionsUseCaseImpl()
     }
 
 }

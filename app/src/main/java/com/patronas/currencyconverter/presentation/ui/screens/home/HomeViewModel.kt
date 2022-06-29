@@ -8,7 +8,7 @@ import com.patronas.domain.EUR
 import com.patronas.domain.USD
 import com.patronas.domain.model.RatesDomainModel
 import com.patronas.domain.usecase.GetRatesUseCase
-import com.patronas.domain.usecase.user.TransactionsUseCase
+import com.patronas.storage.datastore.transactions.TransactionsUseCase
 import com.patronas.utils.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,9 +50,9 @@ class HomeViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             withContext(dispatcher.background()) {
-                // fetchRates()
+              //  fetchRates()
                 setInitialTransactionCurrencies()
-                setInitialBalance()
+                setInitialBalances()
             }
         }
     }
@@ -111,7 +111,7 @@ class HomeViewModel @Inject constructor(
             ratesModel.value.currencies.toMutableList().filter { it != currency }
     }
 
-    private fun setInitialBalance() {
+    private suspend fun setInitialBalances() {
         transactionsUseCase.initBalance(
             initialAmount = initialBalanceEUR,
             primaryCurrency = EUR,
@@ -120,7 +120,9 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun updateBalance(currency: String, amount: Double) {
-        transactionsUseCase.updateBalance(currency = currency, amount = amount)
+        viewModelScope.launch(dispatcher.background()) {
+            transactionsUseCase.updateBalance(currency = currency, amount = amount)
+        }
     }
 
 }
