@@ -137,7 +137,7 @@ fun DropDownList(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = { expanded = false },
-        modifier = Modifier.height(300.dp)
+        modifier = Modifier.width(150.dp).height(300.dp)
     ) {
         currencies.forEach { label ->
             DropdownMenuItem(onClick = {

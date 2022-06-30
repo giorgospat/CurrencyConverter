@@ -1,12 +1,11 @@
 package com.patronas.di
 
-import com.patronas.utils.DateProvider
-import com.patronas.utils.DateProviderImpl
-import com.patronas.utils.DispatcherProvider
-import com.patronas.utils.DispatcherProviderImpl
+import android.content.Context
+import com.patronas.utils.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import javax.inject.Singleton
@@ -29,6 +28,12 @@ class AppModule {
     @Singleton
     fun provideDateProvider(): DateProvider {
         return DateProviderImpl()
+    }
+
+    @Provides
+    @Singleton
+    fun provideResourcesRepo(@ApplicationContext context: Context): ResourcesRepo {
+        return ResourcesRepoImpl(context = context)
     }
 
 }

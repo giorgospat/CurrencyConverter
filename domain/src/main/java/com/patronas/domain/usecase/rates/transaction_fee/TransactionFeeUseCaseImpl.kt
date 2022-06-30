@@ -25,10 +25,10 @@ class TransactionFeeUseCaseImpl : TransactionFeeUseCase {
                 }.size
 
                 if (todayTransactionCount <= dailyLimitForBaseFee) {
-                    amount * currencyRate * baseFeePercent
+                    amount.div(currencyRate) * baseFeePercent
                 } else {
                     val extraFeeInBaseCurrency = extraFeeAmount * baseCurrencyRate
-                    (amount * currencyRate * extraFeePercent) + extraFeeInBaseCurrency
+                    amount.div(currencyRate) * extraFeePercent + extraFeeInBaseCurrency
                 }
             }
             transactionHistory.size < freeExchanges -> {

@@ -18,12 +18,14 @@ data class HomeUiState(
     val updateSellAmount: (String) -> Unit,
     val balances: StateFlow<List<BalanceUiModel>>,
     val transactionFee: StateFlow<Double>,
-    val dismissDialog: () -> Unit
+    val dismissDialog: () -> Unit,
+    val onFeeLearnMore: () -> Unit
 )
 
 sealed class HomeUiEvent {
     data class ExchangeCompleted(val message: String) : HomeUiEvent()
-    object InputAmountEmptyError : HomeUiEvent()
+    object InputAmountIncorrectError : HomeUiEvent()
     object InsufficientBalanceError : HomeUiEvent()
+    data class FeesExplanation(val message: String) : HomeUiEvent()
     object Default : HomeUiEvent()
 }

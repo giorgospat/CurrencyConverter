@@ -6,9 +6,14 @@
     <string name="receive_label">Receive</string>
     <string name="submit_btn_label">Submit</string>
     <string name="popup_ok_button">OK</string>
-    <string name="popup_currency_converted_title">Currency converted</string>
+    <string name="currency_success_convertion_title">Currency converted</string>
+    <string name="success_exchange_message_with_fee">"You have converted %1s %2s to %3s %4s. </string>
+    <string name="success_exchange_message_commission_fee">Commission fee -%1s %2s</string>
     <string name="currency_conversion_error_title">Transaction error</string>
-    <string name="empty_amount_error">Sell amount is empty, please check your input.</string>
+    <string name="fees_explanation_dialog_title">Fee explanation</string>
+    <string name="fees_explanation_message">The first %1$s currency exchanges are free of charge but afterwards they\'re charged %2$s%% of the currency being traded. If you exceed %3$s conversions per day, then the commission for the next conversions should be %4$s%% + %5$s %6$s value equivalent of the converted currency.</string>
+    <string name="fees_learn_more">Learn more</string>
+    <string name="incorrect_amount_error">Sell amount is incorrect, please check your input.</string>
     <string name="insufficient_balance_error">Your balance is not enough for this transaction.</string>
-    <string name="current_fee_label">Transaction fee: %s€</string>
+    <string name="current_fee_label">Transaction fee: + %s€</string>
 </resources>

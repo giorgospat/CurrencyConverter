@@ -27,17 +27,17 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 onDismiss = {
                     uiState.dismissDialog()
                 },
-                title = stringResource(id = R.string.popup_currency_converted_title),
+                title = stringResource(id = R.string.currency_success_convertion_title),
                 message = uiEvent.message
             )
         }
-        is InputAmountEmptyError -> {
+        is InputAmountIncorrectError -> {
             InfoDialog(
                 onDismiss = {
                     uiState.dismissDialog()
                 },
                 title = stringResource(id = R.string.currency_conversion_error_title),
-                message = stringResource(id = R.string.empty_amount_error)
+                message = stringResource(id = R.string.incorrect_amount_error)
             )
         }
         is InsufficientBalanceError -> {
@@ -47,6 +47,15 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 },
                 title = stringResource(id = R.string.currency_conversion_error_title),
                 message = stringResource(id = R.string.insufficient_balance_error)
+            )
+        }
+        is FeesExplanation -> {
+            InfoDialog(
+                onDismiss = {
+                    uiState.dismissDialog()
+                },
+                title = stringResource(id = R.string.fees_explanation_dialog_title),
+                message = uiEvent.message
             )
         }
         is Default -> {}
@@ -66,7 +75,12 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             SubmitButton(onSubmit = { uiState.makeTransaction() })
         }
         item {
-            FeeText(uiState.transactionFee.collectAsState().value)
+            FeeText(
+                uiState.transactionFee.collectAsState().value,
+                onLearnMore = {
+                    uiState.onFeeLearnMore()
+                }
+            )
         }
     }
 
