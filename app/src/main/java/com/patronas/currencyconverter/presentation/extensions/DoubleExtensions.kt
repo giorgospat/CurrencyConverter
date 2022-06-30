@@ -9,7 +9,3 @@ fun Double.round(decimals: Int = 2): String {
 fun Double.convertToBaseCurrency(rate: Double): Double {
     return this * rate
 }
-
-fun Double.convertCurrencyWithRate(rate: Double): Double {
-    return this * rate
-}

@@ -1,9 +1,10 @@
 package com.patronas.currencyconverter.presentation.ui.screens.home
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.material.LinearProgressIndicator
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -17,70 +18,87 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 
     val uiState = viewModel.uiState
     val uiEvent = viewModel.uiEvent.collectAsState().value
+    var dataError by remember { mutableStateOf(false) }
 
     /**
-     * handle events
+     * subscribe to UI events
      */
     when (uiEvent) {
         is ExchangeCompleted -> {
             InfoDialog(
-                onDismiss = {
-                    uiState.dismissDialog()
-                },
-                title = stringResource(id = R.string.currency_success_convertion_title),
+                onDismiss = { uiState.dismissDialog() },
+                title = stringResource(id = R.string.dialog_currency_success_convertion_title),
                 message = uiEvent.message
             )
         }
         is InputAmountIncorrectError -> {
             InfoDialog(
-                onDismiss = {
-                    uiState.dismissDialog()
-                },
+                onDismiss = { uiState.dismissDialog() },
                 title = stringResource(id = R.string.currency_conversion_error_title),
                 message = stringResource(id = R.string.incorrect_amount_error)
             )
         }
         is InsufficientBalanceError -> {
             InfoDialog(
-                onDismiss = {
-                    uiState.dismissDialog()
-                },
+                onDismiss = { uiState.dismissDialog() },
                 title = stringResource(id = R.string.currency_conversion_error_title),
                 message = stringResource(id = R.string.insufficient_balance_error)
             )
         }
+        is UnknownTransactionError -> {
+            InfoDialog(
+                onDismiss = { uiState.dismissDialog() },
+                title = stringResource(id = R.string.currency_conversion_error_title),
+                message = stringResource(id = R.string.dialog_generic_transaction_error_message)
+            )
+        }
         is FeesExplanation -> {
             InfoDialog(
-                onDismiss = {
-                    uiState.dismissDialog()
-                },
+                onDismiss = { uiState.dismissDialog() },
                 title = stringResource(id = R.string.fees_explanation_dialog_title),
                 message = uiEvent.message
+            )
+        }
+        is LoadingRatesError -> {
+            InfoDialog(
+                onDismiss = { uiState.dismissDialog() },
+                title = stringResource(id = R.string.dialog_loading_rates_error_title),
+                message = stringResource(id = R.string.dialog_loading_rates_error_message)
+            )
+            dataError = true
+        }
+        is Loading -> {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth()
             )
         }
         is Default -> {}
     }
 
+
     /**
-     * create UI
+     * Main layout
      */
-    LazyColumn(modifier = Modifier.padding(10.dp)) {
-        item {
-            RatesHorizontalList(balances = uiState.balances.collectAsState().value)
-        }
-        item {
-            CurrencyTransaction(uiState = uiState)
-        }
-        item {
-            SubmitButton(onSubmit = { uiState.makeTransaction() })
-        }
-        item {
-            FeeText(
-                uiState.transactionFee.collectAsState().value,
-                onLearnMore = {
-                    uiState.onFeeLearnMore()
-                }
-            )
+    if (!dataError) {
+        LazyColumn(modifier = Modifier.padding(horizontal = 10.dp, vertical = 20.dp)) {
+            item {
+                RatesHorizontalList(balances = uiState.balances.collectAsState().value)
+            }
+            item {
+                CurrencyTransaction(uiState = uiState)
+            }
+            item {
+                SubmitButton(onSubmit = { uiState.makeTransaction() })
+            }
+            item {
+                FeeText(
+                    fee = uiState.transactionFee.collectAsState().value,
+                    currency = uiState.selectedSellCurrency.collectAsState().value,
+                    onLearnMore = {
+                        uiState.onFeeLearnMore()
+                    }
+                )
+            }
         }
     }
 

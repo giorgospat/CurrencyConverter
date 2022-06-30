@@ -26,6 +26,9 @@ sealed class HomeUiEvent {
     data class ExchangeCompleted(val message: String) : HomeUiEvent()
     object InputAmountIncorrectError : HomeUiEvent()
     object InsufficientBalanceError : HomeUiEvent()
+    object UnknownTransactionError : HomeUiEvent()
     data class FeesExplanation(val message: String) : HomeUiEvent()
+    object LoadingRatesError : HomeUiEvent()
+    object Loading : HomeUiEvent()
     object Default : HomeUiEvent()
 }

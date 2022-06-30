@@ -48,6 +48,8 @@ class TransactionsUseCaseImpl(private val context: Context, moshi: Moshi) : Tran
                 //insert only NEW currencies from API - previous currencies with balances will be unchanged
                 savedBalances.putAll(
                     currencies
+                        //keep base currency first in the list
+                        .sortedWith(compareBy<String> { it != primaryCurrency }.thenBy { it })
                         .associateWith { 0.0 }
                         .filter { !savedBalances.contains(it.key) }
                 )
@@ -58,7 +60,10 @@ class TransactionsUseCaseImpl(private val context: Context, moshi: Moshi) : Tran
                 /**
                 First time initializing
                  */
-                val balancesMap = currencies.associateWith { 0.0 }.toMutableMap()
+                val balancesMap = currencies
+                    //keep base currency first in the list
+                    .sortedWith(compareBy<String> { it != primaryCurrency }.thenBy { it })
+                    .associateWith { 0.0 }.toMutableMap()
                 balancesMap[primaryCurrency] = initialAmount
                 prefs[USER_BALANCES] = balancesAdapter.toJson(balancesMap)
             }
@@ -71,6 +76,8 @@ class TransactionsUseCaseImpl(private val context: Context, moshi: Moshi) : Tran
                 prefs[USER_BALANCES]?.let {
                     UserBalanceModel(currencies = balancesAdapter.fromJson(it) as MutableMap<String, Double>)
                 } ?: UserBalanceModel()
+            }.also {
+                it.map { it.currencies.toSortedMap() }
             }
     }
 
@@ -81,27 +88,30 @@ class TransactionsUseCaseImpl(private val context: Context, moshi: Moshi) : Tran
         buyAmount: Double,
         date: Date
     ): TransactionResponse {
-        context.dataStore.edit { prefs ->
-            prefs[USER_BALANCES]?.let {
-                //fetch map
-                val savedBalances: MutableMap<String, Double> =
-                    balancesAdapter.fromJson(it) as MutableMap<String, Double>
+        return try {
+            context.dataStore.edit { prefs ->
+                prefs[USER_BALANCES]?.let {
+                    //fetch map
+                    val savedBalances: MutableMap<String, Double> =
+                        balancesAdapter.fromJson(it) as MutableMap<String, Double>
 
-                //make transactions
-                savedBalances[fromCurrency]?.let { currentAmount ->
-                    savedBalances[fromCurrency] = currentAmount - sellAmount
-                }
-                savedBalances[toCurrency]?.let { currentAmount ->
-                    savedBalances[toCurrency] = currentAmount + buyAmount
-                }
+                    //make transactions
+                    savedBalances[fromCurrency]?.let { currentAmount ->
+                        savedBalances[fromCurrency] = currentAmount - sellAmount
+                    }
+                    savedBalances[toCurrency]?.let { currentAmount ->
+                        savedBalances[toCurrency] = currentAmount + buyAmount
+                    }
 
-                //save updated map
-                prefs[USER_BALANCES] = balancesAdapter.toJson(savedBalances)
-                storeTransactionDate(date = date, prefs = prefs)
+                    //save updated map
+                    prefs[USER_BALANCES] = balancesAdapter.toJson(savedBalances)
+                    storeTransactionDate(date = date, prefs = prefs)
+                }
             }
+            TransactionResponse.Success
+        } catch (e: Exception) {
+            TransactionResponse.Error
         }
-
-        return TransactionResponse.Success
     }
 
     override fun getTransactionHistory(): Flow<List<Date>> {

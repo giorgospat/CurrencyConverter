@@ -6,8 +6,11 @@
     <string name="receive_label">Receive</string>
     <string name="submit_btn_label">Submit</string>
     <string name="popup_ok_button">OK</string>
-    <string name="currency_success_convertion_title">Currency converted</string>
-    <string name="success_exchange_message_with_fee">"You have converted %1s %2s to %3s %4s. </string>
+    <string name="dialog_loading_rates_error_title">Error loading rates</string>
+    <string name="dialog_loading_rates_error_message">Something went wrong. Please try again in a while.</string>
+    <string name="dialog_currency_success_convertion_title">Currency converted</string>
+    <string name="dialog_success_exchange_message_with_fee">"You have converted %1s %2s to %3s %4s. </string>
+    <string name="dialog_generic_transaction_error_message">Your transaction could not be completed. Please try again.</string>
     <string name="success_exchange_message_commission_fee">Commission fee -%1s %2s</string>
     <string name="currency_conversion_error_title">Transaction error</string>
     <string name="fees_explanation_dialog_title">Fee explanation</string>
@@ -15,5 +18,5 @@
     <string name="fees_learn_more">Learn more</string>
     <string name="incorrect_amount_error">Sell amount is incorrect, please check your input.</string>
     <string name="insufficient_balance_error">Your balance is not enough for this transaction.</string>
-    <string name="current_fee_label">Transaction fee: + %s€</string>
+    <string name="current_fee_label">Transaction fee: + %1s %2s</string>
 </resources>

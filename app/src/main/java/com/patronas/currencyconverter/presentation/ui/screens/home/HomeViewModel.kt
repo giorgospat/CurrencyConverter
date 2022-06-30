@@ -7,21 +7,21 @@ import com.patronas.currencyconverter.presentation.extensions.*
 import com.patronas.currencyconverter.presentation.model.BalanceUiModel
 import com.patronas.currencyconverter.presentation.model.toUiModel
 import com.patronas.data.base.DomainApiResult
-import com.patronas.domain.EUR
-import com.patronas.domain.USD
+import com.patronas.domain.config.EUR
 import com.patronas.domain.config.TransactionFeeConfiguration.baseFeePercent
 import com.patronas.domain.config.TransactionFeeConfiguration.dailyLimitForBaseFee
 import com.patronas.domain.config.TransactionFeeConfiguration.extraFeeAmount
 import com.patronas.domain.config.TransactionFeeConfiguration.extraFeePercent
 import com.patronas.domain.config.TransactionFeeConfiguration.freeExchanges
 import com.patronas.domain.config.TransactionFeeConfiguration.zeroFee
+import com.patronas.domain.config.USD
+import com.patronas.domain.config.initialBalanceEUR
 import com.patronas.domain.extensions.getRateForCurrency
 import com.patronas.domain.model.RatesDomainModel
 import com.patronas.domain.model.reusable.RateModel
 import com.patronas.domain.usecase.rates.GetRatesUseCase
 import com.patronas.domain.usecase.rates.transaction_fee.TransactionFeeUseCase
 import com.patronas.storage.datastore.transactions.TransactionsUseCase
-import com.patronas.storage.model.transaction.TransactionError
 import com.patronas.storage.model.transaction.TransactionResponse
 import com.patronas.utils.DateProvider
 import com.patronas.utils.DispatcherProvider
@@ -30,6 +30,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -74,8 +75,6 @@ class HomeViewModel @Inject constructor(
     private val _uiEvent = MutableStateFlow<HomeUiEvent>(HomeUiEvent.Default)
     val uiEvent = _uiEvent.asStateFlow()
 
-    private val initialBalanceEUR = 1000.0
-
     init {
         viewModelScope.launch {
             withContext(dispatcher.background()) {
@@ -83,8 +82,8 @@ class HomeViewModel @Inject constructor(
                 //fetchRates()
                 setInitialTransactionCurrencies()
                 setInitialBalances()
-                observeBalances()
             }
+            observeUserBalances()
         }
     }
 
@@ -124,12 +123,14 @@ class HomeViewModel @Inject constructor(
     )
 
     private suspend fun fetchRates() {
+        _uiEvent.value = HomeUiEvent.Loading
         when (val request = ratesUseCase.getRates()) {
             is DomainApiResult.Success -> {
                 _ratesModel.value = request.data
+                _uiEvent.value = HomeUiEvent.Default
             }
             is DomainApiResult.Error -> {
-                //TODO handle error
+                _uiEvent.value = HomeUiEvent.LoadingRatesError
             }
         }
     }
@@ -140,6 +141,14 @@ class HomeViewModel @Inject constructor(
 
         _selectedSellCurrency.value = ratesModel.value.currencies.find { it == EUR } ?: ""
         _selectedBuyCurrency.value = ratesModel.value.currencies.find { it == USD } ?: ""
+    }
+
+    private suspend fun setInitialBalances() {
+        transactionsUseCase.initBalance(
+            initialAmount = initialBalanceEUR,
+            primaryCurrency = EUR,
+            currencies = ratesModel.value.currencies
+        )
     }
 
     private fun updateSellCurrenciesList(currency: String) {
@@ -176,12 +185,10 @@ class HomeViewModel @Inject constructor(
         calculateFee()
     }
 
-    private suspend fun setInitialBalances() {
-        transactionsUseCase.initBalance(
-            initialAmount = initialBalanceEUR,
-            primaryCurrency = EUR,
-            currencies = ratesModel.value.currencies
-        )
+    private suspend fun observeUserBalances() {
+        transactionsUseCase.getBalance().collect {
+            _balances.value = it.toUiModel()
+        }
     }
 
     private fun makeTransaction(
@@ -192,7 +199,7 @@ class HomeViewModel @Inject constructor(
     ) {
 
         if (!sellAmount.isValidDouble() || !buyAmount.isValidDouble()) {
-            _uiEvent.tryEmit(HomeUiEvent.InputAmountIncorrectError)
+            _uiEvent.value = HomeUiEvent.InputAmountIncorrectError
             return
         }
 
@@ -201,12 +208,11 @@ class HomeViewModel @Inject constructor(
             calculateFee()
 
             if (sellAmount.hasValidBalance(
-                    balance = transactionsUseCase.getBalance().first()
+                    balance = transactionsUseCase.getBalance().firstOrNull()
                         .getBalanceFor(currency = fromCurrency),
                     fee = transactionFee.value
                 )
             ) {
-
                 when (val transactionResult = transactionsUseCase.exchangeCurrency(
                     fromCurrency = fromCurrency,
                     sellAmount = sellAmount.toDouble() + transactionFee.value,
@@ -216,7 +222,7 @@ class HomeViewModel @Inject constructor(
                 )) {
                     is TransactionResponse.Success -> {
                         var message = resourcesRepo.getString(
-                            R.string.success_exchange_message_with_fee,
+                            R.string.dialog_success_exchange_message_with_fee,
                             sellAmount,
                             fromCurrency,
                             buyAmount,
@@ -230,29 +236,16 @@ class HomeViewModel @Inject constructor(
                             )
                         }
 
-                        _uiEvent.emit(HomeUiEvent.ExchangeCompleted(message = message))
+                        _uiEvent.value = HomeUiEvent.ExchangeCompleted(message = message)
                     }
 
                     is TransactionResponse.Error -> {
-                        when (transactionResult.error) {
-                            TransactionError.INSUFFICIENT_BALANCE -> {
-                                _uiEvent.tryEmit(HomeUiEvent.InsufficientBalanceError)
-                            }
-                            TransactionError.INVALID_AMOUNT -> {
-                                _uiEvent.tryEmit(HomeUiEvent.InputAmountIncorrectError)
-                            }
-                        }
+                        _uiEvent.value = HomeUiEvent.UnknownTransactionError
                     }
                 }
             } else {
-                _uiEvent.tryEmit(HomeUiEvent.InsufficientBalanceError)
+                _uiEvent.value = HomeUiEvent.InsufficientBalanceError
             }
-        }
-    }
-
-    private suspend fun observeBalances() {
-        transactionsUseCase.getBalance().collect {
-            _balances.value = it.toUiModel(firstCurrency = ratesModel.value.baseRate)
         }
     }
 
@@ -285,33 +278,33 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun dismissDialog() {
-        _uiEvent.tryEmit(HomeUiEvent.Default)
+        _uiEvent.value = HomeUiEvent.Default
     }
 
     private fun showFeeExplanation() {
         val explanationMessage = resourcesRepo.getString(
             R.string.fees_explanation_message,
             freeExchanges,
-            (baseFeePercent * 100).round(),
+            baseFeePercent.round(),
             dailyLimitForBaseFee,
-            (extraFeePercent * 100).round(),
+            extraFeePercent.round(),
             extraFeeAmount,
             ratesModel.value.baseRate
         )
 
-        _uiEvent.tryEmit(HomeUiEvent.FeesExplanation(message = explanationMessage))
+        _uiEvent.value = HomeUiEvent.FeesExplanation(message = explanationMessage)
     }
 
     private fun fetchFakeRates() {
         _ratesModel.value = RatesDomainModel(
             baseRate = "EUR",
-            currencies = listOf("EUR", "AFN", "AED", "USD", "TWD"),
+            currencies = listOf("AFN", "AED", "USD", "TWD", "EUR"),
             rates = listOf(
-                RateModel(name = "EUR", rate = 1.0),
                 RateModel(name = "AED", rate = 3.886633),
                 RateModel(name = "AFN", rate = 94.698461),
                 RateModel(name = "USD", rate = 1.058134),
-                RateModel(name = "TWD", rate = 31.392738)
+                RateModel(name = "TWD", rate = 31.392738),
+                RateModel(name = "EUR", rate = 1.0)
             )
         )
     }

@@ -1,9 +1,9 @@
 package com.patronas.domain.usecase.rates.transaction_fee
 
-import com.patronas.domain.config.TransactionFeeConfiguration.baseFeePercent
+import com.patronas.domain.config.TransactionFeeConfiguration.baseFee
 import com.patronas.domain.config.TransactionFeeConfiguration.dailyLimitForBaseFee
+import com.patronas.domain.config.TransactionFeeConfiguration.extraFee
 import com.patronas.domain.config.TransactionFeeConfiguration.extraFeeAmount
-import com.patronas.domain.config.TransactionFeeConfiguration.extraFeePercent
 import com.patronas.domain.config.TransactionFeeConfiguration.freeExchanges
 import com.patronas.domain.config.TransactionFeeConfiguration.zeroFee
 import com.patronas.domain.extensions.day
@@ -25,10 +25,10 @@ class TransactionFeeUseCaseImpl : TransactionFeeUseCase {
                 }.size
 
                 if (todayTransactionCount <= dailyLimitForBaseFee) {
-                    amount.div(currencyRate) * baseFeePercent
+                    amount.div(currencyRate) * baseFee
                 } else {
                     val extraFeeInBaseCurrency = extraFeeAmount * baseCurrencyRate
-                    amount.div(currencyRate) * extraFeePercent + extraFeeInBaseCurrency
+                    amount.div(currencyRate) * extraFee + extraFeeInBaseCurrency
                 }
             }
             transactionHistory.size < freeExchanges -> {
