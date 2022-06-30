@@ -1,5 +1,7 @@
 package com.patronas.di
 
+import com.patronas.utils.DateProvider
+import com.patronas.utils.DateProviderImpl
 import com.patronas.utils.DispatcherProvider
 import com.patronas.utils.DispatcherProviderImpl
 import dagger.Module
@@ -21,6 +23,12 @@ class AppModule {
             backgroundThread = Dispatchers.IO,
             default = Dispatchers.Default
         )
+    }
+
+    @Provides
+    @Singleton
+    fun provideDateProvider(): DateProvider {
+        return DateProviderImpl()
     }
 
 }

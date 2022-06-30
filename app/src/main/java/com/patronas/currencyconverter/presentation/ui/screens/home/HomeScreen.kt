@@ -10,10 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.patronas.currencyconverter.R
 import com.patronas.currencyconverter.presentation.ui.screens.home.HomeUiEvent.*
-import com.patronas.currencyconverter.presentation.ui.screens.home.composables.CurrencyTransaction
-import com.patronas.currencyconverter.presentation.ui.screens.home.composables.InfoDialog
-import com.patronas.currencyconverter.presentation.ui.screens.home.composables.RatesHorizontalList
-import com.patronas.currencyconverter.presentation.ui.screens.home.composables.SubmitButton
+import com.patronas.currencyconverter.presentation.ui.screens.home.composables.*
 
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
@@ -67,6 +64,9 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         }
         item {
             SubmitButton(onSubmit = { uiState.makeTransaction() })
+        }
+        item {
+            FeeText(uiState.transactionFee.collectAsState().value)
         }
     }
 

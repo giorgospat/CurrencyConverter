@@ -2,13 +2,13 @@ package com.patronas.storage.datastore.transactions
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.patronas.storage.extensions.isValidDouble
+import com.patronas.storage.datastore.PreferencesKeys.TRANSACTION_DATES
+import com.patronas.storage.datastore.PreferencesKeys.USER_BALANCES
 import com.patronas.storage.model.UserBalanceModel
-import com.patronas.storage.model.transaction.TransactionError
 import com.patronas.storage.model.transaction.TransactionResponse
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
@@ -16,19 +16,21 @@ import com.squareup.moshi.Types
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.lang.reflect.Type
+import java.util.*
 
 
 class TransactionsUseCaseImpl(private val context: Context, moshi: Moshi) : TransactionsUseCase {
 
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "transactionPrefs")
-    private val USER_BALANCES = stringPreferencesKey("user_balances")
+    private val commaSeparator = ","
 
-    var moshiType: Type = Types.newParameterizedType(
+    var balancesMoshiType: Type = Types.newParameterizedType(
         MutableMap::class.java,
         String::class.java,
         Double::class.javaObjectType
     )
-    var adapter: JsonAdapter<Map<String, Double>> = moshi.adapter(moshiType)
+    var balancesAdapter: JsonAdapter<Map<String, Double>> = moshi.adapter(balancesMoshiType)
+
 
     override suspend fun initBalance(
         initialAmount: Double,
@@ -41,7 +43,7 @@ class TransactionsUseCaseImpl(private val context: Context, moshi: Moshi) : Tran
              */
             prefs[USER_BALANCES]?.let {
                 val savedBalances: MutableMap<String, Double> =
-                    adapter.fromJson(it) as MutableMap<String, Double>
+                    balancesAdapter.fromJson(it) as MutableMap<String, Double>
 
                 //insert only NEW currencies from API - previous currencies with balances will be unchanged
                 savedBalances.putAll(
@@ -50,7 +52,7 @@ class TransactionsUseCaseImpl(private val context: Context, moshi: Moshi) : Tran
                         .filter { !savedBalances.contains(it.key) }
                 )
                 //save updated map
-                prefs[USER_BALANCES] = adapter.toJson(savedBalances)
+                prefs[USER_BALANCES] = balancesAdapter.toJson(savedBalances)
 
             } ?: run {
                 /**
@@ -58,7 +60,7 @@ class TransactionsUseCaseImpl(private val context: Context, moshi: Moshi) : Tran
                  */
                 val balancesMap = currencies.associateWith { 0.0 }.toMutableMap()
                 balancesMap[primaryCurrency] = initialAmount
-                prefs[USER_BALANCES] = adapter.toJson(balancesMap)
+                prefs[USER_BALANCES] = balancesAdapter.toJson(balancesMap)
             }
         }
     }
@@ -67,40 +69,62 @@ class TransactionsUseCaseImpl(private val context: Context, moshi: Moshi) : Tran
         return context.dataStore.data
             .map { prefs ->
                 prefs[USER_BALANCES]?.let {
-                    UserBalanceModel(currencies = adapter.fromJson(it) as MutableMap<String, Double>)
+                    UserBalanceModel(currencies = balancesAdapter.fromJson(it) as MutableMap<String, Double>)
                 } ?: UserBalanceModel()
             }
     }
 
     override suspend fun exchangeCurrency(
         fromCurrency: String,
-        sellAmount: String,
+        sellAmount: Double,
         toCurrency: String,
-        buyAmount: String
+        buyAmount: Double,
+        date: Date
     ): TransactionResponse {
-        if (sellAmount.isValidDouble() && buyAmount.isValidDouble()) {
-            context.dataStore.edit { prefs ->
-                prefs[USER_BALANCES]?.let {
-                    //fetch map
-                    val savedBalances: MutableMap<String, Double> =
-                        adapter.fromJson(it) as MutableMap<String, Double>
+        context.dataStore.edit { prefs ->
+            prefs[USER_BALANCES]?.let {
+                //fetch map
+                val savedBalances: MutableMap<String, Double> =
+                    balancesAdapter.fromJson(it) as MutableMap<String, Double>
 
-                    //make transactions
-                    savedBalances[fromCurrency]?.let { currentAmount ->
-                        savedBalances[fromCurrency] = currentAmount - sellAmount.toDouble()
-                    }
-                    savedBalances[toCurrency]?.let { currentAmount ->
-                        savedBalances[toCurrency] = currentAmount + buyAmount.toDouble()
-                    }
-
-                    //save updated map
-                    prefs[USER_BALANCES] = adapter.toJson(savedBalances)
+                //make transactions
+                savedBalances[fromCurrency]?.let { currentAmount ->
+                    savedBalances[fromCurrency] = currentAmount - sellAmount
                 }
+                savedBalances[toCurrency]?.let { currentAmount ->
+                    savedBalances[toCurrency] = currentAmount + buyAmount
+                }
+
+                //save updated map
+                prefs[USER_BALANCES] = balancesAdapter.toJson(savedBalances)
+                storeTransactionDate(date = date, prefs = prefs)
             }
-        } else {
-            return TransactionResponse.Error(error = TransactionError.INVALID_AMOUNT)
         }
+
         return TransactionResponse.Success
+    }
+
+    override fun getTransactionHistory(): Flow<List<Date>> {
+        return context.dataStore.data
+            .map { prefs ->
+                prefs[TRANSACTION_DATES]?.split(commaSeparator)?.map {
+                    Date(it.toLong())
+                } ?: listOf()
+            }
+    }
+
+    private fun storeTransactionDate(date: Date, prefs: MutablePreferences) {
+        val savedTransactions = prefs[TRANSACTION_DATES]?.split(commaSeparator)?.toMutableList()
+
+        savedTransactions?.let {
+            it.add(date.time.toString())
+            prefs[TRANSACTION_DATES] = it
+                .filter { it.isNotEmpty() }
+                .joinToString(separator = commaSeparator)
+
+        } ?: run {//first time
+            prefs[TRANSACTION_DATES] = date.time.toString()
+        }
     }
 
 }

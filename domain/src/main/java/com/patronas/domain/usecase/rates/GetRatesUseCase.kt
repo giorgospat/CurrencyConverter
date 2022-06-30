@@ -1,4 +1,4 @@
-package com.patronas.domain.usecase
+package com.patronas.domain.usecase.rates
 
 import com.patronas.data.base.DomainApiResult
 import com.patronas.domain.model.RatesDomainModel

@@ -2,19 +2,22 @@ package com.patronas.currencyconverter.presentation.ui.screens.home
 
 import androidx.lifecycle.viewModelScope
 import com.patronas.currencyconverter.base.BaseViewModel
-import com.patronas.currencyconverter.presentation.extensions.round
+import com.patronas.currencyconverter.presentation.extensions.*
 import com.patronas.currencyconverter.presentation.model.BalanceUiModel
 import com.patronas.currencyconverter.presentation.model.toUiModel
 import com.patronas.data.base.DomainApiResult
 import com.patronas.domain.EUR
 import com.patronas.domain.USD
+import com.patronas.domain.config.TransactionFeeConfiguration.zeroFee
 import com.patronas.domain.extensions.getRateForCurrency
 import com.patronas.domain.model.RatesDomainModel
 import com.patronas.domain.model.reusable.RateModel
-import com.patronas.domain.usecase.GetRatesUseCase
+import com.patronas.domain.usecase.rates.GetRatesUseCase
+import com.patronas.domain.usecase.rates.transaction_fee.TransactionFeeUseCase
 import com.patronas.storage.datastore.transactions.TransactionsUseCase
 import com.patronas.storage.model.transaction.TransactionError
 import com.patronas.storage.model.transaction.TransactionResponse
+import com.patronas.utils.DateProvider
 import com.patronas.utils.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,14 +25,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val dispatcher: DispatcherProvider,
     private val ratesUseCase: GetRatesUseCase,
-    private val transactionsUseCase: TransactionsUseCase
+    private val transactionsUseCase: TransactionsUseCase,
+    private val date: DateProvider,
+    private val transactionFeeUseCase: TransactionFeeUseCase
 ) : BaseViewModel() {
 
     private val _ratesModel = MutableStateFlow(RatesDomainModel())
@@ -52,6 +56,9 @@ class HomeViewModel @Inject constructor(
 
     private val _buyAmount = MutableStateFlow("")
     private val buyAmount = _buyAmount.asStateFlow()
+
+    private val _transactionFee = MutableStateFlow(zeroFee)
+    private val transactionFee = _transactionFee.asStateFlow()
 
     private val _balances = MutableStateFlow(listOf<BalanceUiModel>())
     private val balances = _balances.asStateFlow()
@@ -96,10 +103,10 @@ class HomeViewModel @Inject constructor(
         sellAmount = sellAmount,
         buyAmount = buyAmount,
         updateSellAmount = {
-            _sellAmount.value = it
-            _buyAmount.value = calculateBuyAmount(amount = it)
+            updateSellAmount(amount = it)
         },
         balances = balances,
+        transactionFee = transactionFee,
         dismissDialog = {
             dismissDialog()
         }
@@ -134,6 +141,8 @@ class HomeViewModel @Inject constructor(
 
         //update value for selected rate
         _buyAmount.value = calculateBuyAmount(amount = sellAmount.value)
+
+        calculateFee()
     }
 
     private fun updateBuyCurrenciesList(currency: String) {
@@ -146,6 +155,14 @@ class HomeViewModel @Inject constructor(
 
         //update value for selected rate
         _buyAmount.value = calculateBuyAmount(amount = sellAmount.value)
+
+        calculateFee()
+    }
+
+    private fun updateSellAmount(amount: String) {
+        _sellAmount.value = amount
+        _buyAmount.value = calculateBuyAmount(amount = amount)
+        calculateFee()
     }
 
     private suspend fun setInitialBalances() {
@@ -162,32 +179,48 @@ class HomeViewModel @Inject constructor(
         toCurrency: String,
         buyAmount: String
     ) {
-        viewModelScope.launch(dispatcher.background()) {
-            when (val transactionResult = transactionsUseCase.exchangeCurrency(
-                fromCurrency = fromCurrency,
-                sellAmount = sellAmount,
-                toCurrency = toCurrency,
-                buyAmount = buyAmount
-            )) {
-                is TransactionResponse.Success -> {
-                    _uiEvent.emit(HomeUiEvent.ExchangeCompleted(message = "All Good!"))
-                    val newBalance = transactionsUseCase.getBalance().first()
-                    Timber.tag("transaction")
-                        .i("$fromCurrency, newBalance: ${newBalance.currencies[fromCurrency]}")
-                    Timber.tag("transaction")
-                        .i("$toCurrency, newBalance: ${newBalance.currencies[toCurrency]}")
-                }
 
-                is TransactionResponse.Error -> {
-                    when (transactionResult.error) {
-                        TransactionError.INSUFFICIENT_BALANCE -> {
-                            _uiEvent.tryEmit(HomeUiEvent.InsufficientBalanceError)
-                        }
-                        TransactionError.INVALID_AMOUNT -> {
-                            _uiEvent.tryEmit(HomeUiEvent.InputAmountEmptyError)
+        if (!sellAmount.isValidDouble() || !buyAmount.isValidDouble()) {
+            _uiEvent.tryEmit(HomeUiEvent.InputAmountEmptyError)
+            return
+        }
+
+        viewModelScope.launch(dispatcher.background()) {
+
+            if (sellAmount.hasValidBalance(
+                    balance = transactionsUseCase.getBalance().first()
+                        .getBalanceFor(currency = fromCurrency),
+                    fee = transactionFee.value
+                )
+            ) {
+
+                when (val transactionResult = transactionsUseCase.exchangeCurrency(
+                    fromCurrency = fromCurrency,
+                    sellAmount = sellAmount.toDouble() + transactionFee.value,
+                    toCurrency = toCurrency,
+                    buyAmount = buyAmount.toDouble(),
+                    date = date.getCurrentDate()
+                )) {
+                    is TransactionResponse.Success -> {
+                        val message =
+                            "You have converted $sellAmount $fromCurrency to $buyAmount $toCurrency. Commission fee -${transactionFee.value.round()} ${ratesModel.value.baseRate}"
+
+                        _uiEvent.emit(HomeUiEvent.ExchangeCompleted(message = message))
+                    }
+
+                    is TransactionResponse.Error -> {
+                        when (transactionResult.error) {
+                            TransactionError.INSUFFICIENT_BALANCE -> {
+                                _uiEvent.tryEmit(HomeUiEvent.InsufficientBalanceError)
+                            }
+                            TransactionError.INVALID_AMOUNT -> {
+                                _uiEvent.tryEmit(HomeUiEvent.InputAmountEmptyError)
+                            }
                         }
                     }
                 }
+            } else {
+                _uiEvent.tryEmit(HomeUiEvent.InsufficientBalanceError)
             }
         }
     }
@@ -214,6 +247,18 @@ class HomeViewModel @Inject constructor(
             }
         }
         return ""
+    }
+
+    private fun calculateFee() {
+        viewModelScope.launch(dispatcher.background()) {
+            _transactionFee.value = transactionFeeUseCase.calculateFee(
+                baseCurrencyRate = ratesModel.value.getRateForCurrency(currency = ratesModel.value.baseRate),
+                currencyRate = ratesModel.value.getRateForCurrency(currency = selectedBuyCurrency.value),
+                amount = sellAmount.value.toDoubleOrDefault(),
+                currentDate = date.getCurrentDate(),
+                transactionHistory = transactionsUseCase.getTransactionHistory().first()
+            )
+        }
     }
 
     private fun dismissDialog() {

@@ -11,4 +11,5 @@ data class BalanceUiModel(
 fun UserBalanceModel.toUiModel(): List<BalanceUiModel> {
     return this.currencies.toList()
         .map { BalanceUiModel(currency = it.first, amount = it.second.round()) }
+        .sortedBy { it.currency }
 }
