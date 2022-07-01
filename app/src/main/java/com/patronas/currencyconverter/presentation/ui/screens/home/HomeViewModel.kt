@@ -230,7 +230,7 @@ class HomeViewModel @Inject constructor(
                             message += resourcesRepo.getString(
                                 R.string.success_exchange_message_commission_fee,
                                 transactionFee.value.round(),
-                                ratesModel.value.baseRate
+                                selectedSellCurrency.value
                             )
                         }
 

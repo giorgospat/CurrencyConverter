@@ -1,5 +1,6 @@
 package com.patronas.currencyconverter.presentation.ui.screens.home.composables
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -15,21 +16,25 @@ import com.patronas.currencyconverter.R
 import com.patronas.currencyconverter.presentation.model.BalanceUiModel
 
 @Composable
-fun RatesHorizontalList(balances: List<BalanceUiModel>) {
+fun RatesHorizontalList(balances: List<BalanceUiModel>, onBalanceClick: (String) -> Unit) {
 
     Column {
         Text(text = stringResource(R.string.my_balances_label))
         LazyRow(modifier = Modifier.padding(vertical = 30.dp)) {
             items(balances) {
-                BalanceItem(item = it)
+                BalanceItem(item = it, onBalanceClick = { onBalanceClick(it) })
             }
         }
     }
 }
 
 @Composable
-fun BalanceItem(item: BalanceUiModel) {
-    Row(modifier = Modifier.padding(end = 30.dp)) {
+fun BalanceItem(item: BalanceUiModel, onBalanceClick: (String) -> Unit) {
+    Row(modifier = Modifier
+        .padding(end = 30.dp)
+        .clickable {
+            onBalanceClick(item.currency)
+        }) {
         Text(text = item.amount, fontWeight = FontWeight.Bold)
         Text(
             text = item.currency,

@@ -75,7 +75,12 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     if (!dataError) {
         LazyColumn(modifier = Modifier.padding(horizontal = 10.dp, vertical = 20.dp)) {
             item {
-                RatesHorizontalList(balances = uiState.balances.collectAsState().value)
+                RatesHorizontalList(
+                    balances = uiState.balances.collectAsState().value,
+                    onBalanceClick = {
+                        uiState.updateSellCurrency(it)
+                    }
+                )
             }
             item {
                 CurrencyTransaction(uiState = uiState)
