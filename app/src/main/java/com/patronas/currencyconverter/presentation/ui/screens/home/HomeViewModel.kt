@@ -19,7 +19,6 @@ import com.patronas.domain.config.USD
 import com.patronas.domain.config.initialBalanceEUR
 import com.patronas.domain.extensions.getRateForCurrency
 import com.patronas.domain.model.RatesDomainModel
-import com.patronas.domain.model.reusable.RateModel
 import com.patronas.domain.usecase.rates.GetRatesUseCase
 import com.patronas.domain.usecase.rates.transaction_fee.TransactionFeeUseCase
 import com.patronas.storage.datastore.transactions.TransactionsUseCase
@@ -79,8 +78,7 @@ class HomeViewModel @Inject constructor(
     init {
         viewModelScope.launch(dispatcher.background()) {
             withContext(dispatcher.background()) {
-                fetchFakeRates()
-                //fetchRates()
+                fetchRates()
                 setInitialTransactionCurrencies()
                 setInitialBalances()
                 observeUserBalances()
@@ -295,20 +293,6 @@ class HomeViewModel @Inject constructor(
         )
 
         _uiEvent.value = HomeUiEvent.FeesExplanation(message = explanationMessage)
-    }
-
-    private fun fetchFakeRates() {
-        _ratesModel.value = RatesDomainModel(
-            baseRate = "EUR",
-            currencies = listOf("AFN", "AED", "USD", "TWD", "EUR"),
-            rates = listOf(
-                RateModel(name = "AED", rate = 3.886633),
-                RateModel(name = "AFN", rate = 94.698461),
-                RateModel(name = "USD", rate = 1.058134),
-                RateModel(name = "TWD", rate = 31.392738),
-                RateModel(name = "EUR", rate = 1.0)
-            )
-        )
     }
 
 }
