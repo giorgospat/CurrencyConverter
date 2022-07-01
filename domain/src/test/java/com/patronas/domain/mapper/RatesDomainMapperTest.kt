@@ -1,7 +1,7 @@
 package com.patronas.domain.mapper
 
-import com.patronas.domain.model.RateModel
 import com.patronas.domain.model.RatesDomainModel
+import com.patronas.domain.model.reusable.RateModel
 import com.patronas.network.model.CurrencyRatesApiResponse
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -21,6 +21,7 @@ class RatesDomainMapperTest {
 
         val exceptedModel = RatesDomainModel(
             baseRate = "EUR",
+            currencies = listOf("AED", "AFN"),
             rates = listOf(
                 RateModel(name = "AED", rate = 3.886633),
                 RateModel(name = "AFN", rate = 94.698461)
@@ -42,6 +43,7 @@ class RatesDomainMapperTest {
 
         val exceptedModel = RatesDomainModel(
             baseRate = "EUR",
+            currencies = listOf(),
             rates = listOf()
         )
 
