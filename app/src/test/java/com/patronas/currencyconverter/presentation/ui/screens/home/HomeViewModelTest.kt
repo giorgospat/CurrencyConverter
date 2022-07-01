@@ -81,12 +81,13 @@ class HomeViewModelTest {
 
     private val dummyDate = Calendar.getInstance().time
 
+
     @Before
     fun init() {
         MockitoAnnotations.openMocks(this)
+        mockDependencies()
         initViewModel()
         uiState = viewModel.uiState
-        mockDependencies()
     }
 
     @Test
