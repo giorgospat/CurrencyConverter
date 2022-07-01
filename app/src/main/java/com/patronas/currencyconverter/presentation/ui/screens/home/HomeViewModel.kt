@@ -1,5 +1,6 @@
 package com.patronas.currencyconverter.presentation.ui.screens.home
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.viewModelScope
 import com.patronas.currencyconverter.R
 import com.patronas.currencyconverter.base.BaseViewModel
@@ -76,14 +77,14 @@ class HomeViewModel @Inject constructor(
     val uiEvent = _uiEvent.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(dispatcher.background()) {
             withContext(dispatcher.background()) {
                 fetchFakeRates()
                 //fetchRates()
                 setInitialTransactionCurrencies()
                 setInitialBalances()
+                observeUserBalances()
             }
-            observeUserBalances()
         }
     }
 
@@ -123,11 +124,9 @@ class HomeViewModel @Inject constructor(
     )
 
     private suspend fun fetchRates() {
-        _uiEvent.value = HomeUiEvent.Loading
         when (val request = ratesUseCase.getRates()) {
             is DomainApiResult.Success -> {
                 _ratesModel.value = request.data
-                _uiEvent.value = HomeUiEvent.Default
             }
             is DomainApiResult.Error -> {
                 _uiEvent.value = HomeUiEvent.LoadingRatesError
@@ -185,7 +184,8 @@ class HomeViewModel @Inject constructor(
         calculateFee()
     }
 
-    private suspend fun observeUserBalances() {
+    @VisibleForTesting
+    internal suspend fun observeUserBalances() {
         transactionsUseCase.getBalance().collect {
             _balances.value = it.toUiModel()
         }
@@ -213,7 +213,7 @@ class HomeViewModel @Inject constructor(
                     fee = transactionFee.value
                 )
             ) {
-                when (val transactionResult = transactionsUseCase.exchangeCurrency(
+                when (transactionsUseCase.exchangeCurrency(
                     fromCurrency = fromCurrency,
                     sellAmount = sellAmount.toDouble() + transactionFee.value,
                     toCurrency = toCurrency,
@@ -240,7 +240,7 @@ class HomeViewModel @Inject constructor(
                     }
 
                     is TransactionResponse.Error -> {
-                        _uiEvent.value = HomeUiEvent.UnknownTransactionError
+                        _uiEvent.value = HomeUiEvent.TransactionError
                     }
                 }
             } else {
@@ -266,14 +266,16 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun calculateFee() {
-        viewModelScope.launch(dispatcher.background()) {
-            _transactionFee.value = transactionFeeUseCase.calculateFee(
-                baseCurrencyRate = ratesModel.value.getRateForCurrency(currency = ratesModel.value.baseRate),
-                currencyRate = ratesModel.value.getRateForCurrency(currency = selectedSellCurrency.value),
-                amount = sellAmount.value.toDoubleOrDefault(),
-                currentDate = date.getCurrentDate(),
-                transactionHistory = transactionsUseCase.getTransactionHistory().first()
-            )
+        viewModelScope.launch(dispatcher.default()) {
+            withContext(dispatcher.default()) {
+                _transactionFee.value = transactionFeeUseCase.calculateFee(
+                    baseCurrencyRate = ratesModel.value.getRateForCurrency(currency = ratesModel.value.baseRate),
+                    currencyRate = ratesModel.value.getRateForCurrency(currency = selectedSellCurrency.value),
+                    amount = sellAmount.value.toDoubleOrDefault(),
+                    currentDate = date.getCurrentDate(),
+                    transactionHistory = transactionsUseCase.getTransactionHistory().first()
+                )
+            }
         }
     }
 

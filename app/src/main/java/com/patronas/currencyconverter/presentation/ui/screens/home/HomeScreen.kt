@@ -1,9 +1,7 @@
 package com.patronas.currencyconverter.presentation.ui.screens.home
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -45,7 +43,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 message = stringResource(id = R.string.insufficient_balance_error)
             )
         }
-        is UnknownTransactionError -> {
+        is TransactionError -> {
             InfoDialog(
                 onDismiss = { uiState.dismissDialog() },
                 title = stringResource(id = R.string.currency_conversion_error_title),
@@ -66,11 +64,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 message = stringResource(id = R.string.dialog_loading_rates_error_message)
             )
             dataError = true
-        }
-        is Loading -> {
-            LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth()
-            )
         }
         is Default -> {}
     }
