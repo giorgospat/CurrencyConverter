@@ -3,7 +3,6 @@ package com.patronas.currencyconverter.presentation.ui.screens.home.composables
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -134,18 +133,17 @@ fun DropDownList(
             contentDescription = null,
         )
     }
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false },
-        modifier = Modifier.width(150.dp).height(300.dp)
-    ) {
-        currencies.forEach { label ->
-            DropdownMenuItem(onClick = {
+
+    if (expanded) {
+        RateSelectionDialog(
+            content = currencies,
+            dismiss = {
                 expanded = false
-                updateSelectedCurrency(label)
-            }) {
-                Text(text = label)
+            },
+            updateCurrency = {
+                updateSelectedCurrency(it)
             }
-        }
+        )
     }
+
 }
