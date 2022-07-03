@@ -17,6 +17,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     val uiState = viewModel.uiState
     val uiEvent = viewModel.uiEvent.collectAsState().value
     var dataError by remember { mutableStateOf(false) }
+    val balances = uiState.balances.collectAsState().value
 
     /**
      * subscribe to UI events
@@ -72,11 +73,14 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     /**
      * Main layout
      */
-    if (!dataError) {
+
+    if (balances.isEmpty()) {
+        Loader()
+    } else if (!dataError) {
         LazyColumn(modifier = Modifier.padding(horizontal = 10.dp, vertical = 20.dp)) {
             item {
                 RatesHorizontalList(
-                    balances = uiState.balances.collectAsState().value,
+                    balances = balances,
                     onBalanceClick = {
                         uiState.updateSellCurrency(it)
                     }
